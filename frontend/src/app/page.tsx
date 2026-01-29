@@ -353,12 +353,12 @@ export default function Home() {
   const handleVerify = async () => {
     if (!result?.proof) return;
     
-    // #region agent log
-    console.log('[DEBUG H1] handleVerify entry - proofLength:', result.proof?.length);
-    // #endregion
-    
     setCurrentStep('verifying');
     addLog('step', '═══ ACTOR 3: VERIFIER (News Reader) ═══');
+    // #region agent log - Debug info in LogPanel
+    addLog('info', `[DEBUG] Proof length: ${result.proof?.length} chars`);
+    addLog('info', `[DEBUG] API URL: ${API_URL}`);
+    // #endregion
     addLog('info', 'Verification checks:');
     addLog('info', '  1. C2PA signature on original image hash');
     addLog('info', '  2. Hash proof (Mode 1) or commitment (Mode 2)');
@@ -366,10 +366,6 @@ export default function Home() {
     addLog('info', '  4. Consistency between proofs');
     
     try {
-      // #region agent log
-      console.log('[DEBUG H1,H3] About to call verify - API_URL:', API_URL, 'proofLengthChars:', result.proof.length);
-      // #endregion
-      
       const response = await fetch(`${API_URL}/api/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -380,10 +376,16 @@ export default function Home() {
         }),
       });
       
+      // #region agent log - Debug response status
+      addLog('info', `[DEBUG] Response status: ${response.status}`);
+      // #endregion
+      
       const verification = await response.json();
       
-      // #region agent log
-      console.log('[DEBUG H2,H3] Verify response:', { status: response.status, verification, validType: typeof verification.valid });
+      // #region agent log - Debug response content
+      addLog('info', `[DEBUG] Response valid: ${verification.valid} (type: ${typeof verification.valid})`);
+      addLog('info', `[DEBUG] Response time_ms: ${verification.verification_time_ms}`);
+      addLog('info', `[DEBUG] Response error: ${verification.error}`);
       // #endregion
       
       if (verification.valid) {
@@ -395,10 +397,6 @@ export default function Home() {
         addLog('warning', verification.error || 'Invalid proof');
       }
       
-      // #region agent log
-      console.log('[DEBUG H2,H4] Setting result - verified:', verification.valid, 'timeMs:', verification.verification_time_ms, 'timeType:', typeof verification.verification_time_ms);
-      // #endregion
-      
       setResult(prev => prev ? { 
         ...prev, 
         verified: verification.valid, 
@@ -408,7 +406,7 @@ export default function Home() {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       // #region agent log
-      console.log('[DEBUG H5] Verify error:', errorMessage, error);
+      addLog('error', `[DEBUG] Catch block error: ${errorMessage}`);
       // #endregion
       addLog('error', `Verification error: ${errorMessage}`);
       setCurrentStep('proof_complete');
