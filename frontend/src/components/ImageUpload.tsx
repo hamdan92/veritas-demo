@@ -45,7 +45,8 @@ export default function ImageUpload({ onUpload }: ImageUploadProps) {
         </div>
         <p className="text-white text-lg font-medium mb-2">Upload an image</p>
         <p className="text-slate-400 text-sm mb-4">Drag and drop or click to select</p>
-        <p className="text-slate-500 text-xs">Supported formats: PNG, JPEG, WebP</p>
+        <p className="text-slate-500 text-xs">Supported: PNG, JPEG, WebP (NOT HEIC)</p>
+        <p className="text-amber-500 text-xs mt-2">For demo: use small images (&lt;200x200px) - ZK proofs are computationally intensive</p>
         <input
           type="file"
           accept="image/*"

@@ -64,7 +64,9 @@ pub fn pixel_vectors_to_image(pixels: &PixelVectors) -> Result<RgbImage> {
 
 /// Load an image from bytes
 pub fn load_image_from_bytes(bytes: &[u8]) -> Result<DynamicImage> {
-    image::load_from_memory(bytes).context("Failed to load image from bytes")
+    image::load_from_memory(bytes).context(
+        "Failed to load image. Supported formats: PNG, JPEG, WebP, GIF. HEIC/HEIF is NOT supported."
+    )
 }
 
 /// Encode an image to PNG bytes
