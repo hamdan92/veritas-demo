@@ -386,22 +386,28 @@ pub fn get_proof_stats(proof_output: &ProofOutput, edit_type: &str) -> ProofStat
 /// Verify a proof (simplified - returns mock result for demo)
 pub fn verify_proof(
     proof_data: &[u8],
-    public_inputs: &[u64],
+    _public_inputs: &[u64],
     _edit_type: &str,
 ) -> VerificationResult {
     let start = Instant::now();
     
     // In a full implementation, we would:
     // 1. Deserialize the proof
-    // 2. Rebuild the circuit verifier
+    // 2. Rebuild the circuit verifier data
     // 3. Verify the proof against public inputs
     
-    // For now, return success if proof data is non-empty
-    let valid = !proof_data.is_empty() && !public_inputs.is_empty();
+    // For demo: verify proof structure is valid (has minimum expected size)
+    // A real Plonky2 proof is typically > 10KB
+    let min_proof_size = 1000; // Minimum expected proof size in bytes
+    let valid = proof_data.len() > min_proof_size;
     
     VerificationResult {
         valid,
         verification_time_ms: start.elapsed().as_millis() as u64,
-        error: if valid { None } else { Some("Invalid proof data".to_string()) },
+        error: if valid { 
+            None 
+        } else { 
+            Some(format!("Proof too small: {} bytes (expected > {})", proof_data.len(), min_proof_size))
+        },
     }
 }
