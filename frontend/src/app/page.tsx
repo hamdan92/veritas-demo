@@ -353,6 +353,10 @@ export default function Home() {
   const handleVerify = async () => {
     if (!result?.proof) return;
     
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/a25365a5-4b2d-4683-bbaf-14c9e38ef9a9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:handleVerify:entry',message:'handleVerify called',data:{proofLength:result.proof?.length,proofFirst100:result.proof?.slice(0,100)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+    // #endregion
+    
     setCurrentStep('verifying');
     addLog('step', '═══ ACTOR 3: VERIFIER (News Reader) ═══');
     addLog('info', 'Verification checks:');
@@ -362,6 +366,10 @@ export default function Home() {
     addLog('info', '  4. Consistency between proofs');
     
     try {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/a25365a5-4b2d-4683-bbaf-14c9e38ef9a9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:handleVerify:beforeFetch',message:'About to call verify API',data:{apiUrl:API_URL,proofLengthChars:result.proof.length},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1,H3'})}).catch(()=>{});
+      // #endregion
+      
       const response = await fetch(`${API_URL}/api/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -374,6 +382,10 @@ export default function Home() {
       
       const verification = await response.json();
       
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/a25365a5-4b2d-4683-bbaf-14c9e38ef9a9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:handleVerify:afterFetch',message:'Received verify response',data:{responseStatus:response.status,verification,verificationValid:verification.valid,verificationType:typeof verification.valid},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2,H3'})}).catch(()=>{});
+      // #endregion
+      
       if (verification.valid) {
         addLog('success', 'PROOF VERIFIED SUCCESSFULLY');
         addLog('info', `Verification time: ${verification.verification_time_ms || '<1'}ms`);
@@ -383,6 +395,10 @@ export default function Home() {
         addLog('warning', verification.error || 'Invalid proof');
       }
       
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/a25365a5-4b2d-4683-bbaf-14c9e38ef9a9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:handleVerify:beforeSetResult',message:'About to update result state',data:{newVerified:verification.valid,newTimeMs:verification.verification_time_ms,timeType:typeof verification.verification_time_ms},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2,H4'})}).catch(()=>{});
+      // #endregion
+      
       setResult(prev => prev ? { 
         ...prev, 
         verified: verification.valid, 
@@ -391,6 +407,9 @@ export default function Home() {
       setCurrentStep('verified');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/a25365a5-4b2d-4683-bbaf-14c9e38ef9a9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:handleVerify:error',message:'Verify error caught',data:{errorMessage,errorObj:String(error)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H5'})}).catch(()=>{});
+      // #endregion
       addLog('error', `Verification error: ${errorMessage}`);
       setCurrentStep('proof_complete');
     }
