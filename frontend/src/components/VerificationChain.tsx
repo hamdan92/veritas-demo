@@ -191,18 +191,37 @@ export default function VerificationChain({ currentStep, signedImage, editParams
                 {/* Edit Info & Proof Data */}
                 {result?.proof && step2Status === 'complete' && (
                   <div className="mt-4 space-y-3">
+                    {/* Editor's Claim - Made Explicit */}
+                    {editParams && (
+                      <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs text-yellow-400 uppercase tracking-wide font-medium">📋 Editor&apos;s Claim</span>
+                        </div>
+                        <div className="text-white font-medium">
+                          &ldquo;I applied ONLY: {editParams.type === 'grayscale' && 'Grayscale Conversion'}
+                          {editParams.type === 'crop' && `Crop (${editParams.width}×${editParams.height} at position ${editParams.x},${editParams.y})`}
+                          {editParams.type === 'blur' && `Blur on region (${editParams.width}×${editParams.height})`}
+                          {editParams.type === 'resize' && `Resize to ${editParams.new_width}×${editParams.new_height}`}&rdquo;
+                        </div>
+                        <p className="text-xs text-slate-400 mt-2">
+                          This claim is bundled with the proof. The proof is ONLY valid for this specific edit.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Proof that backs the claim */}
                     {editParams && (
                       <div className="bg-slate-900/50 rounded-lg p-3">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs text-slate-500 uppercase tracking-wide">Verified Edit Operation</span>
-                          <span className="text-xs text-green-400">✓ Proven</span>
+                          <span className="text-xs text-slate-500 uppercase tracking-wide">Proof Backing This Claim</span>
+                          <span className="text-xs text-green-400">✓ Valid</span>
                         </div>
-                        <div className="text-slate-300 font-medium">
-                          {editParams.type === 'grayscale' && '🔲 Grayscale Conversion'}
-                          {editParams.type === 'crop' && `✂️ Crop (${editParams.width}×${editParams.height} at ${editParams.x},${editParams.y})`}
-                          {editParams.type === 'blur' && `🔵 Blur Region (${editParams.width}×${editParams.height})`}
-                          {editParams.type === 'resize' && `📐 Resize (to ${editParams.new_width}×${editParams.new_height})`}
+                        <div className="text-slate-300 text-sm">
+                          Circuit type: <span className="font-mono text-blue-400">{editParams.type}_transform</span>
                         </div>
+                        <p className="text-xs text-slate-500 mt-1">
+                          If the claim was false, this proof would fail verification
+                        </p>
                       </div>
                     )}
 
@@ -297,28 +316,40 @@ export default function VerificationChain({ currentStep, signedImage, editParams
                       <>
                         <div className="bg-slate-900/50 rounded-lg p-3 space-y-2">
                           <span className="text-xs text-slate-500 uppercase tracking-wide">What Was Verified</span>
-                          <ul className="text-sm text-slate-300 space-y-1 mt-2">
-                            <li className="flex items-center gap-2">
-                              <span className="text-green-400">✓</span>
-                              Original image came from trusted device
+                          <ul className="text-sm text-slate-300 space-y-2 mt-2">
+                            <li className="flex items-start gap-2">
+                              <span className="text-green-400 mt-0.5">✓</span>
+                              <div>
+                                <span className="font-medium">Origin Verified</span>
+                                <p className="text-xs text-slate-400">Original image came from a trusted signed device</p>
+                              </div>
                             </li>
-                            <li className="flex items-center gap-2">
-                              <span className="text-green-400">✓</span>
-                              Image fingerprint matches original
+                            <li className="flex items-start gap-2">
+                              <span className="text-green-400 mt-0.5">✓</span>
+                              <div>
+                                <span className="font-medium">Claim Verified</span>
+                                <p className="text-xs text-slate-400">Editor&apos;s claim matches the proof circuit type</p>
+                              </div>
                             </li>
-                            <li className="flex items-center gap-2">
-                              <span className="text-green-400">✓</span>
-                              Edit proof is mathematically valid
+                            <li className="flex items-start gap-2">
+                              <span className="text-green-400 mt-0.5">✓</span>
+                              <div>
+                                <span className="font-medium">Proof Valid</span>
+                                <p className="text-xs text-slate-400">ZK-SNARK proof is mathematically correct</p>
+                              </div>
                             </li>
-                            <li className="flex items-center gap-2">
-                              <span className="text-green-400">✓</span>
-                              No hidden modifications detected
+                            <li className="flex items-start gap-2">
+                              <span className="text-green-400 mt-0.5">✓</span>
+                              <div>
+                                <span className="font-medium">No Hidden Edits</span>
+                                <p className="text-xs text-slate-400">Proof guarantees ONLY the claimed edit was made</p>
+                              </div>
                             </li>
                           </ul>
                         </div>
 
                         <div className="text-sm text-green-400 bg-green-500/10 rounded p-3 font-medium">
-                          ✓ You can TRUST this photo. Even though it was edited, no deceptive changes were made.
+                          ✓ You can TRUST this photo. The editor claimed a specific edit, and the proof confirms that&apos;s ALL they did.
                         </div>
                       </>
                     )}

@@ -91,6 +91,34 @@ export default function HowItWorks() {
       ]
     },
     {
+      id: 'claim',
+      question: 'Where does the verifier get the editor\'s claim about the edit?',
+      icon: '📦',
+      shortAnswer: 'The claim is bundled WITH the proof - the proof only works for that specific claim',
+      details: [
+        {
+          title: 'The Editor Provides a Package',
+          content: 'When an editor shares a verified image, they provide a BUNDLE containing:\n• The edited image (pixels)\n• The claim: "I applied [grayscale/crop/blur/etc.]"\n• The ZK proof\n• Reference to the original\'s signature'
+        },
+        {
+          title: 'The Claim is Explicit',
+          content: 'The editor MUST state what transformation they claim to have done. They can\'t just say "I edited it" - they must specify: "I converted to grayscale" or "I cropped region (x,y,w,h)" etc.'
+        },
+        {
+          title: 'The Proof is Claim-Specific',
+          content: 'Here\'s the key insight: A ZK proof for "grayscale" is DIFFERENT from a proof for "crop". The proof circuit is built specifically for the claimed transformation. You cannot use a grayscale proof to verify a crop claim.'
+        },
+        {
+          title: 'What If the Editor Lies About the Claim?',
+          content: 'If the editor claims "grayscale" but actually did something else:\n• The proof will FAIL verification\n• The grayscale circuit checks: output[i] = (R[i]+G[i]+B[i])/3\n• If the actual edit was different, this equation won\'t hold\n• No valid proof can be generated for a false claim'
+        },
+        {
+          title: 'In Practice: C2PA Metadata',
+          content: 'In real-world implementations (like C2PA/Content Credentials), this bundle is embedded as metadata INSIDE the image file - similar to EXIF data. When you open the image, software can read and verify the embedded claims and proofs automatically.'
+        }
+      ]
+    },
+    {
       id: 'chain',
       question: 'How does the complete chain of custody work?',
       icon: '🔗',
