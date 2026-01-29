@@ -124,7 +124,7 @@ export default function Home() {
     }
     
     addLog('step', 'Initiating ZK proof generation...');
-    addLog('info', 'Connecting to backend API');
+    addLog('info', `Backend: ${API_URL}`);
     
     try {
       // Extract base64 data from data URL
@@ -168,8 +168,15 @@ export default function Home() {
       // Poll for job status
       pollJobStatus(job_id);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Fetch error:', error);
+      let errorMessage = 'Unknown error';
+      if (error instanceof TypeError) {
+        errorMessage = `Network error: ${error.message}. Check if backend is reachable.`;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
       addLog('error', `Failed to create job: ${errorMessage}`);
+      addLog('info', `Attempted URL: ${API_URL}/api/edit`);
       setCurrentStep('image_ready');
     }
   };
