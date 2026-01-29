@@ -39,7 +39,7 @@ interface EditParams {
   new_height?: number;
 }
 
-type Step = 'idle' | 'signing' | 'signed' | 'selecting_edit' | 'generating_proof' | 'proof_complete' | 'verifying' | 'verified';
+type Step = 'idle' | 'uploading' | 'signing' | 'signed' | 'selecting_edit' | 'generating_proof' | 'proof_complete' | 'verifying' | 'verified';
 
 interface VerificationChainProps {
   currentStep: Step;
@@ -51,7 +51,7 @@ interface VerificationChainProps {
 export default function VerificationChain({ currentStep, signedImage, editParams, result }: VerificationChainProps) {
   const getStepStatus = (step: number) => {
     if (step === 1) {
-      if (['signing'].includes(currentStep)) return 'active';
+      if (['uploading', 'signing'].includes(currentStep)) return 'active';
       if (['signed', 'selecting_edit', 'generating_proof', 'proof_complete', 'verifying', 'verified'].includes(currentStep)) return 'complete';
       return 'pending';
     }
