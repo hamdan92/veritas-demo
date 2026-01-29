@@ -71,8 +71,8 @@ pub fn prove_crop(
     
     let proving_time = start.elapsed().as_millis() as u64;
     
-    // Serialize proof
-    let proof_bytes = bincode::serialize(&proof.to_bytes()).unwrap_or_default();
+    // Serialize proof - use to_bytes() directly, no bincode wrapper needed
+    let proof_bytes = proof.to_bytes();
     
     // Extract public inputs
     let public_inputs: Vec<u64> = proof.public_inputs.iter().map(|f| f.to_canonical_u64()).collect();
@@ -158,7 +158,7 @@ pub fn prove_grayscale(
     let proof = data.prove(pw)?;
     
     let proving_time = start.elapsed().as_millis() as u64;
-    let proof_bytes = bincode::serialize(&proof.to_bytes()).unwrap_or_default();
+    let proof_bytes = proof.to_bytes();
     let public_inputs: Vec<u64> = proof.public_inputs.iter().map(|f| f.to_canonical_u64()).collect();
     
     Ok(ProofOutput {
@@ -274,7 +274,7 @@ pub fn prove_blur(
     let proof = data.prove(pw)?;
     
     let proving_time = start.elapsed().as_millis() as u64;
-    let proof_bytes = bincode::serialize(&proof.to_bytes()).unwrap_or_default();
+    let proof_bytes = proof.to_bytes();
     let public_inputs: Vec<u64> = proof.public_inputs.iter().map(|f| f.to_canonical_u64()).collect();
     
     Ok(ProofOutput {
@@ -358,7 +358,7 @@ pub fn prove_resize(
     let proof = data.prove(pw)?;
     
     let proving_time = start.elapsed().as_millis() as u64;
-    let proof_bytes = bincode::serialize(&proof.to_bytes()).unwrap_or_default();
+    let proof_bytes = proof.to_bytes();
     let public_inputs: Vec<u64> = proof.public_inputs.iter().map(|f| f.to_canonical_u64()).collect();
     
     Ok(ProofOutput {
