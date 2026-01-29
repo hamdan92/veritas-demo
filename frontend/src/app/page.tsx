@@ -8,6 +8,7 @@ import TechnicalPanel from '@/components/TechnicalPanel';
 import ResultPanel from '@/components/ResultPanel';
 import LogPanel, { LogEntry } from '@/components/LogPanel';
 import VerificationChain from '@/components/VerificationChain';
+import HowItWorks from '@/components/HowItWorks';
 
 export interface EditParams {
   type: 'crop' | 'blur' | 'resize' | 'grayscale';
@@ -541,6 +542,9 @@ export default function Home() {
 
             {/* Upload */}
             <ImageUpload onUpload={handleImageUpload} />
+
+            {/* How It Works - Educational Section */}
+            <HowItWorks />
           </div>
         ) : (
           /* Active Flow - Two Column Layout */
@@ -661,6 +665,16 @@ export default function Home() {
                     result={result}
                     job={job}
                   />
+                </div>
+              </details>
+
+              {/* How It Works - Collapsible */}
+              <details className="bg-slate-800/50 rounded-xl border border-slate-700">
+                <summary className="px-4 py-3 cursor-pointer text-slate-400 hover:text-white text-sm font-medium">
+                  🎓 How Does It Work? (Click to learn)
+                </summary>
+                <div className="p-4">
+                  <HowItWorks />
                 </div>
               </details>
             </div>
