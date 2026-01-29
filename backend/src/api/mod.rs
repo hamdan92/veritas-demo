@@ -215,25 +215,21 @@ async fn process_crop(
     })
 }
 
-/// Get current memory usage in MB
+/// Get current process memory usage in MB
 fn get_process_memory_mb() -> f64 {
     let mut sys = System::new();
-    sys.refresh_memory();
-    // sysinfo returns memory in bytes
-    sys.used_memory() as f64 / 1024.0 / 1024.0
-}
-
-/// Get process memory usage in MB (more accurate for our process)
-fn get_process_memory_mb() -> f64 {
-    let mut sys = System::new();
-    sys.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
+    sys.refresh_processes();
     
-    if let Some(process) = sys.process(sysinfo::get_current_pid().unwrap_or(sysinfo::Pid::from(0))) {
-        // Process memory is in bytes
-        process.memory() as f64 / 1024.0 / 1024.0
-    } else {
-        0.0
+    if let Ok(pid) = sysinfo::get_current_pid() {
+        if let Some(process) = sys.process(pid) {
+            // Process memory is in bytes
+            return process.memory() as f64 / 1024.0 / 1024.0;
+        }
     }
+    
+    // Fallback to system memory if process not found
+    sys.refresh_memory();
+    sys.used_memory() as f64 / 1024.0 / 1024.0
 }
 
 async fn process_grayscale(
