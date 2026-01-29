@@ -167,7 +167,7 @@ async fn process_crop(
     config: &ProofConfig,
 ) -> anyhow::Result<JobResult> {
     // Capture resource metrics before
-    let memory_before = get_memory_usage_mb();
+    let memory_before = get_process_memory_mb();
     let wall_start = Instant::now();
     
     // Apply the crop to get edited image
@@ -182,7 +182,7 @@ async fn process_crop(
     
     // Capture resource metrics after
     let wall_time_ms = wall_start.elapsed().as_millis() as u64;
-    let memory_after = get_memory_usage_mb();
+    let memory_after = get_process_memory_mb();
     let peak_memory = memory_after.max(memory_before);
     
     // Convert edited pixels to image
@@ -216,10 +216,24 @@ async fn process_crop(
 }
 
 /// Get current memory usage in MB
-fn get_memory_usage_mb() -> f64 {
+fn get_process_memory_mb() -> f64 {
     let mut sys = System::new();
     sys.refresh_memory();
+    // sysinfo returns memory in bytes
     sys.used_memory() as f64 / 1024.0 / 1024.0
+}
+
+/// Get process memory usage in MB (more accurate for our process)
+fn get_process_memory_mb() -> f64 {
+    let mut sys = System::new();
+    sys.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
+    
+    if let Some(process) = sys.process(sysinfo::get_current_pid().unwrap_or(sysinfo::Pid::from(0))) {
+        // Process memory is in bytes
+        process.memory() as f64 / 1024.0 / 1024.0
+    } else {
+        0.0
+    }
 }
 
 async fn process_grayscale(
@@ -227,7 +241,7 @@ async fn process_grayscale(
     config: &ProofConfig,
 ) -> anyhow::Result<JobResult> {
     // Capture resource metrics before
-    let memory_before = get_memory_usage_mb();
+    let memory_before = get_process_memory_mb();
     let wall_start = Instant::now();
     
     // Apply grayscale
@@ -241,7 +255,7 @@ async fn process_grayscale(
     
     // Capture resource metrics after
     let wall_time_ms = wall_start.elapsed().as_millis() as u64;
-    let memory_after = get_memory_usage_mb();
+    let memory_after = get_process_memory_mb();
     let peak_memory = memory_after.max(memory_before);
     
     // Convert to image
@@ -280,7 +294,7 @@ async fn process_blur(
     config: &ProofConfig,
 ) -> anyhow::Result<JobResult> {
     // Capture resource metrics before
-    let memory_before = get_memory_usage_mb();
+    let memory_before = get_process_memory_mb();
     let wall_start = Instant::now();
     
     // Apply blur
@@ -295,7 +309,7 @@ async fn process_blur(
     
     // Capture resource metrics after
     let wall_time_ms = wall_start.elapsed().as_millis() as u64;
-    let memory_after = get_memory_usage_mb();
+    let memory_after = get_process_memory_mb();
     let peak_memory = memory_after.max(memory_before);
     
     // Convert to image
@@ -334,7 +348,7 @@ async fn process_resize(
     config: &ProofConfig,
 ) -> anyhow::Result<JobResult> {
     // Capture resource metrics before
-    let memory_before = get_memory_usage_mb();
+    let memory_before = get_process_memory_mb();
     let wall_start = Instant::now();
     
     // Apply resize
@@ -349,7 +363,7 @@ async fn process_resize(
     
     // Capture resource metrics after
     let wall_time_ms = wall_start.elapsed().as_millis() as u64;
-    let memory_after = get_memory_usage_mb();
+    let memory_after = get_process_memory_mb();
     let peak_memory = memory_after.max(memory_before);
     
     // Convert to image
