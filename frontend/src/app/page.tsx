@@ -262,7 +262,7 @@ export default function Home() {
       }
       addLog('error', `Failed to create job: ${errorMessage}`);
       addLog('info', `Attempted URL: ${API_URL}/api/edit`);
-      setCurrentStep('image_ready');
+      setCurrentStep('signed');
     }
   };
 
@@ -324,7 +324,7 @@ export default function Home() {
           setCurrentStep('proof_complete');
         } else if (jobData.status === 'failed') {
           addLog('error', `Job failed: ${jobData.error || 'Unknown error'}`);
-          setCurrentStep('image_ready');
+          setCurrentStep('signed');
         } else {
           // Keep polling
           pollCount++;
@@ -339,7 +339,7 @@ export default function Home() {
           addLog('error', 'Job lost - server may have restarted due to memory limits');
           addLog('warning', 'Plonky2 proof generation requires significant memory');
           addLog('info', 'Try a MUCH smaller image (32x32 or 64x64 pixels)');
-          setCurrentStep('image_ready');
+          setCurrentStep('signed');
           return; // Stop polling
         }
         addLog('warning', `Poll error: ${errorMessage}, retrying...`);
