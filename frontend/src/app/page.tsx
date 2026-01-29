@@ -88,7 +88,17 @@ export default function Home() {
   const [editParams, setEditParams] = useState<EditParams | null>(null);
   const [job, setJob] = useState<Job | null>(null);
   const [result, setResult] = useState<JobResult | null>(null);
-  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [logs, setLogs] = useState<LogEntry[]>([
+    { timestamp: new Date(), level: 'step', message: '🔐 VerITAS: Verifying Image Transformations at Scale' },
+    { timestamp: new Date(), level: 'info', message: '' },
+    { timestamp: new Date(), level: 'info', message: 'This demo proves you can TRUST edited photos.' },
+    { timestamp: new Date(), level: 'info', message: '' },
+    { timestamp: new Date(), level: 'info', message: '📷 Step 1: Camera signs the original image' },
+    { timestamp: new Date(), level: 'info', message: '✏️ Step 2: Editor proves what changes were made' },
+    { timestamp: new Date(), level: 'info', message: '🔍 Step 3: You verify the complete chain' },
+    { timestamp: new Date(), level: 'info', message: '' },
+    { timestamp: new Date(), level: 'step', message: '→ Upload an image to begin' },
+  ]);
   const [signedImage, setSignedImage] = useState<SignedImageData | null>(null);
   const [signingMode, setSigningMode] = useState<'lattice' | 'polynomial'>('lattice');
 
@@ -103,9 +113,8 @@ export default function Home() {
   }, []);
 
   const handleImageUpload = async (file: File, dataUrl: string) => {
-    addLog('step', '═══ ACTOR 1: SIGNER (Camera/C2PA) ═══');
-    addLog('info', `File: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
-    addLog('info', `Type: ${file.type || 'unknown'}`);
+    addLog('info', '');
+    addLog('info', `📁 Image received: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
     
     // Check file type
     const supportedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif'];
@@ -132,7 +141,15 @@ export default function Home() {
     setSignedImage(null);
     
     // Sign the image (Actor 1: Camera/Signer)
-    addLog('step', 'Initiating C2PA signing process...');
+    addLog('step', '═══ STEP 1: CAMERA AUTHENTICATION ═══');
+    addLog('info', '');
+    addLog('info', '📷 WHAT THIS STEP DOES:');
+    addLog('info', '   "Is this image authentic and untampered from the source?"');
+    addLog('info', '');
+    addLog('info', '   The camera digitally "stamps" the image - like a notary seal.');
+    addLog('info', '   If anyone changes even 1 pixel later, this stamp becomes invalid.');
+    addLog('info', '');
+    addLog('step', 'Creating digital signature...');
     addLog('info', `Signing mode: ${signingMode === 'lattice' ? 'Mode 1 (Lattice + Poseidon)' : 'Mode 2 (Polynomial Commitment)'}`);
     
     try {
@@ -154,17 +171,18 @@ export default function Home() {
       
       const signResult = await response.json();
       
-      addLog('success', 'Image signed successfully!');
-      addLog('info', `Mode: ${signResult.mode}`);
-      addLog('info', `Hash: ${signResult.image_hash.slice(0, 16)}...`);
-      addLog('info', `Signature: ${signResult.signature.slice(0, 16)}...`);
-      addLog('info', `Signing time: ${signResult.signing_time_ms}ms`);
+      addLog('success', '✓ Image authenticated and sealed!');
       addLog('info', `Device: ${signResult.metadata.device_id}`);
+      addLog('info', `Unique fingerprint: ${signResult.image_hash.slice(0, 16)}...`);
+      addLog('info', `Digital seal: ${signResult.signature.slice(0, 16)}...`);
+      addLog('info', '');
+      addLog('info', '✓ QUESTION ANSWERED: "Yes, this image is authentic from the source"');
+      addLog('info', '');
       
       setSignedImage(signResult);
       setCurrentStep('signed');
       
-      addLog('step', 'Image ready for editing (proceed to Actor 2: Prover)');
+      addLog('step', '→ Ready for Step 2: Select an edit to apply');
     } catch (error) {
       console.error('Signing error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -197,8 +215,16 @@ export default function Home() {
     setEditParams(params);
     setCurrentStep('generating_proof');
     
-    addLog('step', '═══ ACTOR 2: PROVER (Newsroom Editor) ═══');
-    addLog('info', `Edit operation: ${params.type.toUpperCase()}`);
+    addLog('step', '═══ STEP 2: PROVING THE EDIT ═══');
+    addLog('info', '');
+    addLog('info', '✏️ WHAT THIS STEP DOES:');
+    addLog('info', '   "Can I prove I ONLY did this specific edit and nothing else?"');
+    addLog('info', '');
+    addLog('info', '   The editor creates mathematical proof that the transformation');
+    addLog('info', '   was done exactly as claimed - no hidden changes, no tampering.');
+    addLog('info', '   Like proving you only cropped a photo without showing the original.');
+    addLog('info', '');
+    addLog('step', `Applying edit: ${params.type.toUpperCase()}`);
     
     if (params.type === 'crop') {
       addLog('info', `Crop region: (${params.x}, ${params.y}) size ${params.width}x${params.height}`);
@@ -302,24 +328,24 @@ export default function Home() {
         }
         
         if (jobData.status === 'completed') {
-          addLog('success', 'ZK proof generated successfully!');
+          addLog('success', '✓ Mathematical proof created!');
           const details = jobData.result?.technical_details;
+          addLog('info', '');
+          addLog('info', '📊 Proof Statistics:');
           if (details?.wall_time_ms) {
-            addLog('info', `Wall time: ${(details.wall_time_ms / 1000).toFixed(2)}s`);
-          }
-          if (details?.cpu_time_ms) {
-            addLog('info', `CPU time: ${(details.cpu_time_ms / 1000).toFixed(2)}s`);
+            addLog('info', `   Time taken: ${(details.wall_time_ms / 1000).toFixed(2)}s`);
           }
           if (jobData.result?.proof_size) {
-            addLog('info', `Proof size: ${(jobData.result.proof_size / 1024).toFixed(2)} KB`);
-          }
-          if (details?.memory_before_mb !== undefined && details?.memory_after_mb !== undefined) {
-            addLog('info', `Memory: ${details.memory_before_mb.toFixed(0)} MB → ${details.memory_after_mb.toFixed(0)} MB`);
+            addLog('info', `   Proof size: ${(jobData.result.proof_size / 1024).toFixed(2)} KB`);
           }
           if (details?.peak_memory_mb) {
-            addLog('info', `Peak memory: ${details.peak_memory_mb.toFixed(0)} MB`);
+            addLog('info', `   Memory used: ${details.peak_memory_mb.toFixed(0)} MB`);
           }
-          addLog('step', 'Proof ready for verification');
+          addLog('info', '');
+          addLog('info', '✓ QUESTION ANSWERED: "Yes, I can prove ONLY this edit was made"');
+          addLog('info', '   The proof mathematically guarantees no hidden changes.');
+          addLog('info', '');
+          addLog('step', '→ Ready for Step 3: Click "Verify Proof" to complete the chain');
           setResult(jobData.result || null);
           setCurrentStep('proof_complete');
         } else if (jobData.status === 'failed') {
@@ -354,16 +380,17 @@ export default function Home() {
     if (!result?.proof) return;
     
     setCurrentStep('verifying');
-    addLog('step', '═══ ACTOR 3: VERIFIER (News Reader) ═══');
-    // #region agent log - Debug info in LogPanel
-    addLog('info', `[DEBUG] Proof length: ${result.proof?.length} chars`);
-    addLog('info', `[DEBUG] API URL: ${API_URL}`);
-    // #endregion
-    addLog('info', 'Verification checks:');
-    addLog('info', '  1. C2PA signature on original image hash');
-    addLog('info', '  2. Hash proof (Mode 1) or commitment (Mode 2)');
-    addLog('info', '  3. Edit proof via PLONK + FRI');
-    addLog('info', '  4. Consistency between proofs');
+    addLog('step', '═══ STEP 3: VERIFICATION (You, the Reader) ═══');
+    addLog('info', '');
+    addLog('info', '🔍 WHAT THIS STEP DOES:');
+    addLog('info', '   "Can I trust this edited photo is legitimate?"');
+    addLog('info', '');
+    addLog('info', '   You (the news reader) verify the complete chain:');
+    addLog('info', '   ✓ Did this come from a real, trusted camera?');
+    addLog('info', '   ✓ Was the claimed edit the ONLY change made?');
+    addLog('info', '   ✓ Is there an unbroken chain from camera → editor → me?');
+    addLog('info', '');
+    addLog('step', 'Checking cryptographic proofs...');
     
     try {
       const response = await fetch(`${API_URL}/api/verify`, {
@@ -376,25 +403,28 @@ export default function Home() {
         }),
       });
       
-      // #region agent log - Debug response status
-      addLog('info', `[DEBUG] Response status: ${response.status}`);
-      // #endregion
-      
       const verification = await response.json();
       
-      // #region agent log - Debug response content
-      addLog('info', `[DEBUG] Response valid: ${verification.valid} (type: ${typeof verification.valid})`);
-      addLog('info', `[DEBUG] Response time_ms: ${verification.verification_time_ms}`);
-      addLog('info', `[DEBUG] Response error: ${verification.error}`);
-      // #endregion
-      
       if (verification.valid) {
-        addLog('success', 'PROOF VERIFIED SUCCESSFULLY');
-        addLog('info', `Verification time: ${verification.verification_time_ms || '<1'}ms`);
-        addLog('step', 'Image transformation is cryptographically proven');
+        addLog('success', '═══════════════════════════════════════');
+        addLog('success', '✓ VERIFICATION COMPLETE - PROOF IS VALID');
+        addLog('success', '═══════════════════════════════════════');
+        addLog('info', '');
+        addLog('info', '🎉 THE BIG QUESTION ANSWERED:');
+        addLog('info', '   "Can I trust this news photo hasn\'t been');
+        addLog('info', '    manipulated to deceive me?"');
+        addLog('info', '');
+        addLog('success', '   ✓ YES! This image has a verified chain of custody.');
+        addLog('info', '');
+        addLog('info', '   Even though it was edited, you have cryptographic');
+        addLog('info', '   proof that ONLY the claimed edit was made.');
+        addLog('info', '   No fake elements added. No context removed.');
+        addLog('info', '');
       } else {
-        addLog('error', 'Proof verification FAILED');
-        addLog('warning', verification.error || 'Invalid proof');
+        addLog('error', '✗ VERIFICATION FAILED');
+        addLog('warning', verification.error || 'The proof could not be verified');
+        addLog('info', '');
+        addLog('warning', '⚠️ This image may have been tampered with!');
       }
       
       setResult(prev => prev ? { 
@@ -405,9 +435,6 @@ export default function Home() {
       setCurrentStep('verified');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      // #region agent log
-      addLog('error', `[DEBUG] Catch block error: ${errorMessage}`);
-      // #endregion
       addLog('error', `Verification error: ${errorMessage}`);
       setCurrentStep('proof_complete');
     }
@@ -422,7 +449,17 @@ export default function Home() {
     setJob(null);
     setResult(null);
     setSignedImage(null);
-    setLogs([{ timestamp: new Date(), level: 'info', message: 'Ready for new image - 3-Actor Flow: Signer → Prover → Verifier' }]);
+    setLogs([
+      { timestamp: new Date(), level: 'step', message: '🔐 VerITAS: Verifying Image Transformations at Scale' },
+      { timestamp: new Date(), level: 'info', message: '' },
+      { timestamp: new Date(), level: 'info', message: 'This demo proves you can TRUST edited photos.' },
+      { timestamp: new Date(), level: 'info', message: '' },
+      { timestamp: new Date(), level: 'info', message: '📷 Step 1: Camera signs the original image' },
+      { timestamp: new Date(), level: 'info', message: '✏️ Step 2: Editor proves what changes were made' },
+      { timestamp: new Date(), level: 'info', message: '🔍 Step 3: You verify the complete chain' },
+      { timestamp: new Date(), level: 'info', message: '' },
+      { timestamp: new Date(), level: 'step', message: '→ Upload an image to begin' },
+    ]);
   };
 
   return (
