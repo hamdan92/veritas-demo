@@ -91,9 +91,11 @@ export default function Home() {
     
     addLog('success', 'Image format validated');
     
-    // Check file size
-    if (file.size > 500 * 1024) {
-      addLog('warning', 'Large file detected - proof generation may take several minutes');
+    // Check file size - be very strict for Railway's memory limits
+    if (file.size > 10 * 1024) {
+      addLog('warning', 'File may be too large for server memory limits');
+      addLog('warning', 'Recommended: Use images under 10KB (32x32 to 64x64 pixels)');
+      addLog('info', 'Larger images will likely crash the server during proof generation');
     }
     
     setImage(dataUrl);
@@ -244,6 +246,13 @@ export default function Home() {
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        if (errorMessage.includes('404')) {
+          addLog('error', 'Job lost - server may have restarted due to memory limits');
+          addLog('warning', 'Plonky2 proof generation requires significant memory');
+          addLog('info', 'Try a MUCH smaller image (32x32 or 64x64 pixels)');
+          setCurrentStep('image_ready');
+          return; // Stop polling
+        }
         addLog('warning', `Poll error: ${errorMessage}, retrying...`);
         setTimeout(poll, 3000);
       }
