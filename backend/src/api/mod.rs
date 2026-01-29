@@ -3,6 +3,8 @@
 use actix_web::{web, HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
+use sysinfo::System;
+use std::time::Instant;
 
 use crate::image_io::{
     self, crop_pixels, grayscale_pixels, blur_pixels, resize_pixels,
@@ -164,6 +166,10 @@ async fn process_crop(
     x: u32, y: u32, width: u32, height: u32,
     config: &ProofConfig,
 ) -> anyhow::Result<JobResult> {
+    // Capture resource metrics before
+    let memory_before = get_memory_usage_mb();
+    let wall_start = Instant::now();
+    
     // Apply the crop to get edited image
     let cropped = crop_pixels(pixels, x, y, width, height)?;
     
@@ -173,6 +179,11 @@ async fn process_crop(
         x, y, width, height,
         config,
     )?;
+    
+    // Capture resource metrics after
+    let wall_time_ms = wall_start.elapsed().as_millis() as u64;
+    let memory_after = get_memory_usage_mb();
+    let peak_memory = memory_after.max(memory_before);
     
     // Convert edited pixels to image
     let edited_img = pixel_vectors_to_image(&cropped)?;
@@ -195,14 +206,30 @@ async fn process_crop(
             proof_system: "Plonky2 (PLONK + FRI)".to_string(),
             field_size_bits: 64,
             security_bits: 100,
+            peak_memory_mb: Some(peak_memory),
+            memory_before_mb: Some(memory_before),
+            memory_after_mb: Some(memory_after),
+            cpu_time_ms: Some(proof_output.proving_time_ms),
+            wall_time_ms: Some(wall_time_ms),
         }),
     })
+}
+
+/// Get current memory usage in MB
+fn get_memory_usage_mb() -> f64 {
+    let mut sys = System::new();
+    sys.refresh_memory();
+    sys.used_memory() as f64 / 1024.0 / 1024.0
 }
 
 async fn process_grayscale(
     pixels: &image_io::PixelVectors,
     config: &ProofConfig,
 ) -> anyhow::Result<JobResult> {
+    // Capture resource metrics before
+    let memory_before = get_memory_usage_mb();
+    let wall_start = Instant::now();
+    
     // Apply grayscale
     let gray = grayscale_pixels(pixels);
     
@@ -211,6 +238,11 @@ async fn process_grayscale(
         &pixels.r, &pixels.g, &pixels.b,
         config,
     )?;
+    
+    // Capture resource metrics after
+    let wall_time_ms = wall_start.elapsed().as_millis() as u64;
+    let memory_after = get_memory_usage_mb();
+    let peak_memory = memory_after.max(memory_before);
     
     // Convert to image
     let edited_img = pixel_vectors_to_image(&gray)?;
@@ -233,6 +265,11 @@ async fn process_grayscale(
             proof_system: "Plonky2 (PLONK + FRI)".to_string(),
             field_size_bits: 64,
             security_bits: 100,
+            peak_memory_mb: Some(peak_memory),
+            memory_before_mb: Some(memory_before),
+            memory_after_mb: Some(memory_after),
+            cpu_time_ms: Some(proof_output.proving_time_ms),
+            wall_time_ms: Some(wall_time_ms),
         }),
     })
 }
@@ -242,6 +279,10 @@ async fn process_blur(
     x: u32, y: u32, width: u32, height: u32,
     config: &ProofConfig,
 ) -> anyhow::Result<JobResult> {
+    // Capture resource metrics before
+    let memory_before = get_memory_usage_mb();
+    let wall_start = Instant::now();
+    
     // Apply blur
     let blurred = blur_pixels(pixels, x, y, width, height)?;
     
@@ -251,6 +292,11 @@ async fn process_blur(
         x, y, width, height,
         config,
     )?;
+    
+    // Capture resource metrics after
+    let wall_time_ms = wall_start.elapsed().as_millis() as u64;
+    let memory_after = get_memory_usage_mb();
+    let peak_memory = memory_after.max(memory_before);
     
     // Convert to image
     let edited_img = pixel_vectors_to_image(&blurred)?;
@@ -273,6 +319,11 @@ async fn process_blur(
             proof_system: "Plonky2 (PLONK + FRI)".to_string(),
             field_size_bits: 64,
             security_bits: 100,
+            peak_memory_mb: Some(peak_memory),
+            memory_before_mb: Some(memory_before),
+            memory_after_mb: Some(memory_after),
+            cpu_time_ms: Some(proof_output.proving_time_ms),
+            wall_time_ms: Some(wall_time_ms),
         }),
     })
 }
@@ -282,6 +333,10 @@ async fn process_resize(
     new_width: u32, new_height: u32,
     config: &ProofConfig,
 ) -> anyhow::Result<JobResult> {
+    // Capture resource metrics before
+    let memory_before = get_memory_usage_mb();
+    let wall_start = Instant::now();
+    
     // Apply resize
     let resized = resize_pixels(pixels, new_width, new_height);
     
@@ -291,6 +346,11 @@ async fn process_resize(
         new_width, new_height,
         config,
     )?;
+    
+    // Capture resource metrics after
+    let wall_time_ms = wall_start.elapsed().as_millis() as u64;
+    let memory_after = get_memory_usage_mb();
+    let peak_memory = memory_after.max(memory_before);
     
     // Convert to image
     let edited_img = pixel_vectors_to_image(&resized)?;
@@ -313,6 +373,11 @@ async fn process_resize(
             proof_system: "Plonky2 (PLONK + FRI)".to_string(),
             field_size_bits: 64,
             security_bits: 100,
+            peak_memory_mb: Some(peak_memory),
+            memory_before_mb: Some(memory_before),
+            memory_after_mb: Some(memory_after),
+            cpu_time_ms: Some(proof_output.proving_time_ms),
+            wall_time_ms: Some(wall_time_ms),
         }),
     })
 }

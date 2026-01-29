@@ -33,6 +33,12 @@ export interface JobResult {
     proof_system: string;
     field_size_bits: number;
     security_bits: number;
+    // Resource metrics
+    peak_memory_mb?: number;
+    memory_before_mb?: number;
+    memory_after_mb?: number;
+    cpu_time_ms?: number;
+    wall_time_ms?: number;
   };
 }
 
@@ -224,11 +230,21 @@ export default function Home() {
         
         if (jobData.status === 'completed') {
           addLog('success', 'ZK proof generated successfully!');
-          if (jobData.result?.proving_time_ms) {
-            addLog('info', `Proving time: ${(jobData.result.proving_time_ms / 1000).toFixed(2)}s`);
+          const details = jobData.result?.technical_details;
+          if (details?.wall_time_ms) {
+            addLog('info', `Wall time: ${(details.wall_time_ms / 1000).toFixed(2)}s`);
+          }
+          if (details?.cpu_time_ms) {
+            addLog('info', `CPU time: ${(details.cpu_time_ms / 1000).toFixed(2)}s`);
           }
           if (jobData.result?.proof_size) {
             addLog('info', `Proof size: ${(jobData.result.proof_size / 1024).toFixed(2)} KB`);
+          }
+          if (details?.memory_before_mb !== undefined && details?.memory_after_mb !== undefined) {
+            addLog('info', `Memory: ${details.memory_before_mb.toFixed(0)} MB → ${details.memory_after_mb.toFixed(0)} MB`);
+          }
+          if (details?.peak_memory_mb) {
+            addLog('info', `Peak memory: ${details.peak_memory_mb.toFixed(0)} MB`);
           }
           addLog('step', 'Proof ready for verification');
           setResult(jobData.result || null);

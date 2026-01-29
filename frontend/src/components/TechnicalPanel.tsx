@@ -119,6 +119,46 @@ export default function TechnicalPanel({ currentStep, editParams, result, job }:
                 </span>
               </div>
             )}
+            
+            {/* Resource Metrics Section */}
+            {(details.wall_time_ms || details.peak_memory_mb) && (
+              <>
+                <div className="border-t border-slate-600 my-3"></div>
+                <h4 className="text-sm font-medium text-slate-300 mb-2">Resource Usage</h4>
+              </>
+            )}
+            {details.wall_time_ms && (
+              <div className="flex justify-between">
+                <span className="text-slate-400">Wall Time</span>
+                <span className="text-white font-mono">
+                  {(details.wall_time_ms / 1000).toFixed(2)}s
+                </span>
+              </div>
+            )}
+            {details.cpu_time_ms && (
+              <div className="flex justify-between">
+                <span className="text-slate-400">CPU Time</span>
+                <span className="text-white font-mono">
+                  {(details.cpu_time_ms / 1000).toFixed(2)}s
+                </span>
+              </div>
+            )}
+            {details.peak_memory_mb && (
+              <div className="flex justify-between">
+                <span className="text-slate-400">Peak Memory</span>
+                <span className="text-white font-mono">
+                  {details.peak_memory_mb.toFixed(0)} MB
+                </span>
+              </div>
+            )}
+            {details.memory_before_mb !== undefined && details.memory_after_mb !== undefined && (
+              <div className="flex justify-between">
+                <span className="text-slate-400">Memory Delta</span>
+                <span className="text-white font-mono">
+                  +{(details.memory_after_mb - details.memory_before_mb).toFixed(0)} MB
+                </span>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -90,6 +90,12 @@ pub struct TechnicalDetails {
     pub proof_system: String,
     pub field_size_bits: u32,
     pub security_bits: u32,
+    // Resource metrics
+    pub peak_memory_mb: Option<f64>,
+    pub memory_before_mb: Option<f64>,
+    pub memory_after_mb: Option<f64>,
+    pub cpu_time_ms: Option<u64>,
+    pub wall_time_ms: Option<u64>,
 }
 
 impl Job {
