@@ -65,7 +65,11 @@ export default function Home() {
   const [result, setResult] = useState<JobResult | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+  // Use production URL directly since NEXT_PUBLIC_ vars need to be available at build time
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 
+    (typeof window !== 'undefined' && window.location.hostname !== 'localhost' 
+      ? 'https://backend-production-d99f.up.railway.app' 
+      : 'http://localhost:8080');
 
   const addLog = useCallback((level: LogEntry['level'], message: string) => {
     setLogs(prev => [...prev, { timestamp: new Date(), level, message }]);
