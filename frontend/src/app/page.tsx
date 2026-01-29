@@ -7,6 +7,7 @@ import StepVisualizer from '@/components/StepVisualizer';
 import TechnicalPanel from '@/components/TechnicalPanel';
 import ResultPanel from '@/components/ResultPanel';
 import LogPanel, { LogEntry } from '@/components/LogPanel';
+import VerificationChain from '@/components/VerificationChain';
 
 export interface EditParams {
   type: 'crop' | 'blur' | 'resize' | 'grayscale';
@@ -89,15 +90,8 @@ export default function Home() {
   const [job, setJob] = useState<Job | null>(null);
   const [result, setResult] = useState<JobResult | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([
-    { timestamp: new Date(), level: 'step', message: '🔐 VerITAS: Verifying Image Transformations at Scale' },
-    { timestamp: new Date(), level: 'info', message: '' },
-    { timestamp: new Date(), level: 'info', message: 'This demo proves you can TRUST edited photos.' },
-    { timestamp: new Date(), level: 'info', message: '' },
-    { timestamp: new Date(), level: 'info', message: '📷 Step 1: Camera signs the original image' },
-    { timestamp: new Date(), level: 'info', message: '✏️ Step 2: Editor proves what changes were made' },
-    { timestamp: new Date(), level: 'info', message: '🔍 Step 3: You verify the complete chain' },
-    { timestamp: new Date(), level: 'info', message: '' },
-    { timestamp: new Date(), level: 'step', message: '→ Upload an image to begin' },
+    { timestamp: new Date(), level: 'info', message: 'VerITAS Demo initialized' },
+    { timestamp: new Date(), level: 'info', message: 'Ready for image upload' },
   ]);
   const [signedImage, setSignedImage] = useState<SignedImageData | null>(null);
   const [signingMode, setSigningMode] = useState<'lattice' | 'polynomial'>('lattice');
@@ -113,8 +107,8 @@ export default function Home() {
   }, []);
 
   const handleImageUpload = async (file: File, dataUrl: string) => {
-    addLog('info', '');
-    addLog('info', `📁 Image received: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
+    addLog('step', 'STEP 1: Camera Authentication');
+    addLog('info', `Image: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
     
     // Check file type
     const supportedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif'];
@@ -141,16 +135,8 @@ export default function Home() {
     setSignedImage(null);
     
     // Sign the image (Actor 1: Camera/Signer)
-    addLog('step', '═══ STEP 1: CAMERA AUTHENTICATION ═══');
-    addLog('info', '');
-    addLog('info', '📷 WHAT THIS STEP DOES:');
-    addLog('info', '   "Is this image authentic and untampered from the source?"');
-    addLog('info', '');
-    addLog('info', '   The camera digitally "stamps" the image - like a notary seal.');
-    addLog('info', '   If anyone changes even 1 pixel later, this stamp becomes invalid.');
-    addLog('info', '');
-    addLog('step', 'Creating digital signature...');
-    addLog('info', `Signing mode: ${signingMode === 'lattice' ? 'Mode 1 (Lattice + Poseidon)' : 'Mode 2 (Polynomial Commitment)'}`);
+    addLog('info', `Mode: ${signingMode === 'lattice' ? 'Lattice + Poseidon' : 'Polynomial Commitment'}`);
+    addLog('info', 'Computing image hash...');
     
     try {
       const base64Data = dataUrl.split(',')[1];
@@ -171,18 +157,15 @@ export default function Home() {
       
       const signResult = await response.json();
       
-      addLog('success', '✓ Image authenticated and sealed!');
+      addLog('success', 'Image signed successfully');
+      addLog('info', `Hash: ${signResult.image_hash}`);
+      addLog('info', `Signature: ${signResult.signature.slice(0, 32)}...`);
       addLog('info', `Device: ${signResult.metadata.device_id}`);
-      addLog('info', `Unique fingerprint: ${signResult.image_hash.slice(0, 16)}...`);
-      addLog('info', `Digital seal: ${signResult.signature.slice(0, 16)}...`);
-      addLog('info', '');
-      addLog('info', '✓ QUESTION ANSWERED: "Yes, this image is authentic from the source"');
-      addLog('info', '');
       
       setSignedImage(signResult);
       setCurrentStep('signed');
       
-      addLog('step', '→ Ready for Step 2: Select an edit to apply');
+      addLog('step', 'STEP 2: Select an edit');
     } catch (error) {
       console.error('Signing error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -215,19 +198,10 @@ export default function Home() {
     setEditParams(params);
     setCurrentStep('generating_proof');
     
-    addLog('step', '═══ STEP 2: PROVING THE EDIT ═══');
-    addLog('info', '');
-    addLog('info', '✏️ WHAT THIS STEP DOES:');
-    addLog('info', '   "Can I prove I ONLY did this specific edit and nothing else?"');
-    addLog('info', '');
-    addLog('info', '   The editor creates mathematical proof that the transformation');
-    addLog('info', '   was done exactly as claimed - no hidden changes, no tampering.');
-    addLog('info', '   Like proving you only cropped a photo without showing the original.');
-    addLog('info', '');
-    addLog('step', `Applying edit: ${params.type.toUpperCase()}`);
+    addLog('info', `Edit: ${params.type.toUpperCase()}`);
     
     if (params.type === 'crop') {
-      addLog('info', `Crop region: (${params.x}, ${params.y}) size ${params.width}x${params.height}`);
+      addLog('info', `Region: (${params.x}, ${params.y}) ${params.width}x${params.height}`);
     } else if (params.type === 'blur') {
       addLog('info', `Blur region: (${params.x}, ${params.y}) size ${params.width}x${params.height}`);
     } else if (params.type === 'resize') {
@@ -328,24 +302,18 @@ export default function Home() {
         }
         
         if (jobData.status === 'completed') {
-          addLog('success', '✓ Mathematical proof created!');
+          addLog('success', 'ZK proof generated');
           const details = jobData.result?.technical_details;
-          addLog('info', '');
-          addLog('info', '📊 Proof Statistics:');
           if (details?.wall_time_ms) {
-            addLog('info', `   Time taken: ${(details.wall_time_ms / 1000).toFixed(2)}s`);
+            addLog('info', `Time: ${(details.wall_time_ms / 1000).toFixed(2)}s`);
           }
           if (jobData.result?.proof_size) {
-            addLog('info', `   Proof size: ${(jobData.result.proof_size / 1024).toFixed(2)} KB`);
+            addLog('info', `Size: ${(jobData.result.proof_size / 1024).toFixed(2)} KB`);
           }
           if (details?.peak_memory_mb) {
-            addLog('info', `   Memory used: ${details.peak_memory_mb.toFixed(0)} MB`);
+            addLog('info', `Memory: ${details.peak_memory_mb.toFixed(0)} MB`);
           }
-          addLog('info', '');
-          addLog('info', '✓ QUESTION ANSWERED: "Yes, I can prove ONLY this edit was made"');
-          addLog('info', '   The proof mathematically guarantees no hidden changes.');
-          addLog('info', '');
-          addLog('step', '→ Ready for Step 3: Click "Verify Proof" to complete the chain');
+          addLog('step', 'STEP 3: Verify the proof');
           setResult(jobData.result || null);
           setCurrentStep('proof_complete');
         } else if (jobData.status === 'failed') {
@@ -380,17 +348,7 @@ export default function Home() {
     if (!result?.proof) return;
     
     setCurrentStep('verifying');
-    addLog('step', '═══ STEP 3: VERIFICATION (You, the Reader) ═══');
-    addLog('info', '');
-    addLog('info', '🔍 WHAT THIS STEP DOES:');
-    addLog('info', '   "Can I trust this edited photo is legitimate?"');
-    addLog('info', '');
-    addLog('info', '   You (the news reader) verify the complete chain:');
-    addLog('info', '   ✓ Did this come from a real, trusted camera?');
-    addLog('info', '   ✓ Was the claimed edit the ONLY change made?');
-    addLog('info', '   ✓ Is there an unbroken chain from camera → editor → me?');
-    addLog('info', '');
-    addLog('step', 'Checking cryptographic proofs...');
+    addLog('info', 'Verifying proof...');
     
     try {
       const response = await fetch(`${API_URL}/api/verify`, {
@@ -406,25 +364,11 @@ export default function Home() {
       const verification = await response.json();
       
       if (verification.valid) {
-        addLog('success', '═══════════════════════════════════════');
-        addLog('success', '✓ VERIFICATION COMPLETE - PROOF IS VALID');
-        addLog('success', '═══════════════════════════════════════');
-        addLog('info', '');
-        addLog('info', '🎉 THE BIG QUESTION ANSWERED:');
-        addLog('info', '   "Can I trust this news photo hasn\'t been');
-        addLog('info', '    manipulated to deceive me?"');
-        addLog('info', '');
-        addLog('success', '   ✓ YES! This image has a verified chain of custody.');
-        addLog('info', '');
-        addLog('info', '   Even though it was edited, you have cryptographic');
-        addLog('info', '   proof that ONLY the claimed edit was made.');
-        addLog('info', '   No fake elements added. No context removed.');
-        addLog('info', '');
+        addLog('success', 'VERIFIED - Proof is valid');
+        addLog('info', `Verification time: ${verification.verification_time_ms || '<1'}ms`);
       } else {
-        addLog('error', '✗ VERIFICATION FAILED');
-        addLog('warning', verification.error || 'The proof could not be verified');
-        addLog('info', '');
-        addLog('warning', '⚠️ This image may have been tampered with!');
+        addLog('error', 'FAILED - Proof invalid');
+        addLog('warning', verification.error || 'Verification failed');
       }
       
       setResult(prev => prev ? { 
@@ -450,15 +394,8 @@ export default function Home() {
     setResult(null);
     setSignedImage(null);
     setLogs([
-      { timestamp: new Date(), level: 'step', message: '🔐 VerITAS: Verifying Image Transformations at Scale' },
-      { timestamp: new Date(), level: 'info', message: '' },
-      { timestamp: new Date(), level: 'info', message: 'This demo proves you can TRUST edited photos.' },
-      { timestamp: new Date(), level: 'info', message: '' },
-      { timestamp: new Date(), level: 'info', message: '📷 Step 1: Camera signs the original image' },
-      { timestamp: new Date(), level: 'info', message: '✏️ Step 2: Editor proves what changes were made' },
-      { timestamp: new Date(), level: 'info', message: '🔍 Step 3: You verify the complete chain' },
-      { timestamp: new Date(), level: 'info', message: '' },
-      { timestamp: new Date(), level: 'step', message: '→ Upload an image to begin' },
+      { timestamp: new Date(), level: 'info', message: 'Session reset' },
+      { timestamp: new Date(), level: 'info', message: 'Ready for new image' },
     ]);
   };
 
@@ -513,146 +450,222 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
-          {/* Left Panel - Image & Controls */}
-          <div className="lg:col-span-2 space-y-6">
-            {currentStep === 'idle' ? (
-              <div className="space-y-4">
-                {/* Signing Mode Selection */}
-                <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
-                  <h3 className="text-sm font-medium text-slate-400 mb-3">Signing Mode (as per VerITAS paper)</h3>
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="signingMode"
-                        checked={signingMode === 'lattice'}
-                        onChange={() => setSigningMode('lattice')}
-                        className="text-blue-500"
-                      />
-                      <span className="text-slate-300">Mode 1: Lattice + Poseidon</span>
-                      <span className="text-xs text-slate-500">(for cameras)</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="signingMode"
-                        checked={signingMode === 'polynomial'}
-                        onChange={() => setSigningMode('polynomial')}
-                        className="text-blue-500"
-                      />
-                      <span className="text-slate-300">Mode 2: Polynomial Commitment</span>
-                      <span className="text-xs text-slate-500">(for powerful signers)</span>
-                    </label>
-                  </div>
+        {/* Main Content - New Layout */}
+        {currentStep === 'idle' ? (
+          /* Initial Upload Screen */
+          <div className="max-w-4xl mx-auto mt-8 space-y-8">
+            {/* Welcome Message */}
+            <div className="text-center space-y-4">
+              <h2 className="text-2xl font-bold text-white">Can You Trust Edited Photos?</h2>
+              <p className="text-slate-400 max-w-2xl mx-auto">
+                This demo proves you can. Using zero-knowledge proofs, we verify that an edited photo 
+                came from a real camera and only the claimed edits were made - no hidden manipulations.
+              </p>
+            </div>
+
+            {/* How It Works */}
+            <div className="grid grid-cols-3 gap-6">
+              <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700 text-center">
+                <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-2xl">📷</span>
                 </div>
-                <ImageUpload onUpload={handleImageUpload} />
+                <h3 className="text-white font-semibold mb-2">1. Camera Signs</h3>
+                <p className="text-slate-400 text-sm">
+                  The camera creates a digital seal - like a notary stamp. Any tampering breaks the seal.
+                </p>
               </div>
-            ) : (
-              <div className="space-y-6">
-                {/* Original/Edited Images */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
-                    <h3 className="text-sm font-medium text-slate-400 mb-3">Original Image</h3>
-                    {image && (
-                      <img 
-                        src={image} 
-                        alt="Original" 
-                        className="w-full h-auto rounded-lg"
-                      />
-                    )}
-                  </div>
-                  <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
-                    <h3 className="text-sm font-medium text-slate-400 mb-3">Edited Image</h3>
-                    {result?.edited_image ? (
-                      <img 
-                        src={`data:image/png;base64,${result.edited_image}`}
-                        alt="Edited" 
-                        className="w-full h-auto rounded-lg"
-                      />
-                    ) : (
-                      <div className="aspect-video bg-slate-700/50 rounded-lg flex items-center justify-center text-slate-500">
-                        {currentStep === 'generating_proof' ? 'Processing...' : 'Select an edit'}
-                      </div>
-                    )}
-                  </div>
+              <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700 text-center">
+                <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-2xl">✏️</span>
                 </div>
+                <h3 className="text-white font-semibold mb-2">2. Editor Proves</h3>
+                <p className="text-slate-400 text-sm">
+                  The editor creates mathematical proof that ONLY the claimed edit was made - nothing hidden.
+                </p>
+              </div>
+              <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700 text-center">
+                <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-2xl">🔍</span>
+                </div>
+                <h3 className="text-white font-semibold mb-2">3. You Verify</h3>
+                <p className="text-slate-400 text-sm">
+                  You verify the complete chain. If it passes, you can TRUST the photo is legitimate.
+                </p>
+              </div>
+            </div>
 
-                {/* Signing Status */}
-                {currentStep === 'signing' && (
-                  <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
-                    <h3 className="text-lg font-semibold text-white mb-4">Signing Image (Actor 1: Camera)</h3>
-                    <div className="flex items-center gap-3">
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
-                      <p className="text-slate-400">Computing {signingMode === 'lattice' ? 'Lattice + Poseidon hash' : 'Polynomial commitment'}...</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Signed Image Info */}
-                {signedImage && currentStep === 'signed' && (
-                  <div className="bg-slate-800 rounded-xl p-4 border border-green-600/50">
-                    <h3 className="text-sm font-medium text-green-400 mb-2">✓ Image Signed (C2PA)</h3>
-                    <div className="text-xs text-slate-400 space-y-1">
-                      <p>Mode: {signedImage.mode}</p>
-                      <p>Hash: {signedImage.image_hash.slice(0, 24)}...</p>
-                      <p>Device: {signedImage.metadata.device_id}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Edit Controls */}
-                {(currentStep === 'signed' || currentStep === 'selecting_edit') && (
-                  <EditControls onEditSelect={handleEditSelect} />
-                )}
-
-                {/* Progress */}
-                {currentStep === 'generating_proof' && job && (
-                  <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
-                    <h3 className="text-lg font-semibold text-white mb-4">Generating ZK Proof</h3>
-                    <div className="w-full bg-slate-700 rounded-full h-3 mb-3">
-                      <div 
-                        className="bg-blue-500 h-3 rounded-full transition-all duration-500"
-                        style={{ width: `${job.progress}%` }}
-                      />
-                    </div>
-                    <p className="text-slate-400 text-sm">{job.message}</p>
-                  </div>
-                )}
-
-                {/* Results */}
-                {(currentStep === 'proof_complete' || currentStep === 'verifying' || currentStep === 'verified') && result && (
-                  <ResultPanel 
-                    result={result} 
-                    onVerify={handleVerify}
-                    isVerifying={currentStep === 'verifying'}
+            {/* Signing Mode Selection */}
+            <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+              <h3 className="text-lg font-semibold text-white mb-4">Select Signing Mode</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                  signingMode === 'lattice' 
+                    ? 'border-blue-500 bg-blue-500/10' 
+                    : 'border-slate-700 hover:border-slate-600'
+                }`}>
+                  <input
+                    type="radio"
+                    name="signingMode"
+                    checked={signingMode === 'lattice'}
+                    onChange={() => setSigningMode('lattice')}
+                    className="mt-1"
                   />
-                )}
-
-                {/* Reset Button */}
-                <button
-                  onClick={handleReset}
-                  className="text-slate-400 hover:text-white text-sm underline"
-                >
-                  Start over with a new image
-                </button>
+                  <div>
+                    <span className="text-white font-medium">Mode 1: Lattice + Poseidon</span>
+                    <p className="text-xs text-slate-400 mt-1">
+                      For resource-limited devices (cameras, phones). Uses lattice-based hashing.
+                    </p>
+                  </div>
+                </label>
+                <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                  signingMode === 'polynomial' 
+                    ? 'border-blue-500 bg-blue-500/10' 
+                    : 'border-slate-700 hover:border-slate-600'
+                }`}>
+                  <input
+                    type="radio"
+                    name="signingMode"
+                    checked={signingMode === 'polynomial'}
+                    onChange={() => setSigningMode('polynomial')}
+                    className="mt-1"
+                  />
+                  <div>
+                    <span className="text-white font-medium">Mode 2: Polynomial Commitment</span>
+                    <p className="text-xs text-slate-400 mt-1">
+                      For powerful signers. Uses KZG polynomial commitments.
+                    </p>
+                  </div>
+                </label>
               </div>
-            )}
+            </div>
 
-            {/* Log Panel */}
-            <LogPanel logs={logs} />
+            {/* Upload */}
+            <ImageUpload onUpload={handleImageUpload} />
           </div>
+        ) : (
+          /* Active Flow - Two Column Layout */
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mt-8">
+            {/* Left: Images & Controls */}
+            <div className="space-y-6">
+              {/* Original/Edited Images */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+                  <h3 className="text-sm font-medium text-slate-400 mb-3 flex items-center gap-2">
+                    📷 Original Image
+                    {signedImage && <span className="text-green-400 text-xs">✓ Signed</span>}
+                  </h3>
+                  {image && (
+                    <img 
+                      src={image} 
+                      alt="Original" 
+                      className="w-full h-auto rounded-lg"
+                    />
+                  )}
+                </div>
+                <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+                  <h3 className="text-sm font-medium text-slate-400 mb-3 flex items-center gap-2">
+                    ✏️ Edited Image
+                    {result?.verified && <span className="text-green-400 text-xs">✓ Verified</span>}
+                  </h3>
+                  {result?.edited_image ? (
+                    <img 
+                      src={`data:image/png;base64,${result.edited_image}`}
+                      alt="Edited" 
+                      className="w-full h-auto rounded-lg"
+                    />
+                  ) : (
+                    <div className="aspect-video bg-slate-700/50 rounded-lg flex items-center justify-center text-slate-500">
+                      {currentStep === 'generating_proof' ? 'Processing...' : 'Select an edit below'}
+                    </div>
+                  )}
+                </div>
+              </div>
 
-          {/* Right Panel - Technical Details */}
-          <div className="space-y-6">
-            <TechnicalPanel 
-              currentStep={currentStep}
-              editParams={editParams}
-              result={result}
-              job={job}
-            />
+              {/* Edit Controls */}
+              {(currentStep === 'signed' || currentStep === 'selecting_edit') && (
+                <EditControls onEditSelect={handleEditSelect} />
+              )}
+
+              {/* Progress */}
+              {currentStep === 'generating_proof' && job && (
+                <div className="bg-slate-800 rounded-xl p-6 border border-blue-500/50">
+                  <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                    <span className="animate-pulse">⚡</span> Generating ZK Proof
+                  </h3>
+                  <div className="w-full bg-slate-700 rounded-full h-3 mb-3">
+                    <div 
+                      className="bg-blue-500 h-3 rounded-full transition-all duration-500"
+                      style={{ width: `${job.progress}%` }}
+                    />
+                  </div>
+                  <p className="text-slate-400 text-sm">{job.message}</p>
+                  <p className="text-xs text-slate-500 mt-2">This creates mathematical proof that the edit was applied correctly</p>
+                </div>
+              )}
+
+              {/* Verify Button */}
+              {currentStep === 'proof_complete' && result && (
+                <button
+                  onClick={handleVerify}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-4 rounded-xl transition-colors flex items-center justify-center gap-3 text-lg"
+                >
+                  <span className="text-2xl">🔍</span>
+                  Verify the Complete Chain
+                </button>
+              )}
+
+              {currentStep === 'verifying' && (
+                <div className="w-full bg-blue-600 text-white font-semibold py-4 rounded-xl flex items-center justify-center gap-3 text-lg">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  Verifying...
+                </div>
+              )}
+
+              {/* Reset */}
+              <button
+                onClick={handleReset}
+                className="text-slate-400 hover:text-white text-sm underline"
+              >
+                Start over with a new image
+              </button>
+
+              {/* Technical Log (collapsible) */}
+              <details className="bg-slate-800/50 rounded-xl border border-slate-700">
+                <summary className="px-4 py-3 cursor-pointer text-slate-400 hover:text-white text-sm">
+                  Technical Log (click to expand)
+                </summary>
+                <div className="px-4 pb-4">
+                  <LogPanel logs={logs} />
+                </div>
+              </details>
+            </div>
+
+            {/* Right: Verification Chain - THE MAIN FOCUS */}
+            <div className="space-y-6">
+              <VerificationChain 
+                currentStep={currentStep}
+                signedImage={signedImage}
+                editParams={editParams}
+                result={result}
+              />
+
+              {/* Technical Details (smaller) */}
+              <details className="bg-slate-800/50 rounded-xl border border-slate-700" open>
+                <summary className="px-4 py-3 cursor-pointer text-slate-400 hover:text-white text-sm font-medium">
+                  Technical Details
+                </summary>
+                <div className="px-4 pb-4">
+                  <TechnicalPanel 
+                    currentStep={currentStep}
+                    editParams={editParams}
+                    result={result}
+                    job={job}
+                  />
+                </div>
+              </details>
+            </div>
           </div>
-        </div>
+        )}
       </main>
 
       {/* Footer */}
