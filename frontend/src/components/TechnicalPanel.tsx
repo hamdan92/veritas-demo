@@ -111,7 +111,7 @@ export default function TechnicalPanel({ currentStep, editParams, result, job }:
                 </span>
               </div>
             )}
-            {result?.verification_time_ms !== undefined && (
+            {result?.verification_time_ms != null && (
               <div className="flex justify-between">
                 <span className="text-slate-400">Verification Time</span>
                 <span className="text-white font-mono">

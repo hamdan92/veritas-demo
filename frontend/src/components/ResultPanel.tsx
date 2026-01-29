@@ -29,7 +29,8 @@ export default function ResultPanel({ result, onVerify, isVerifying }: ResultPan
             <p className="text-sm text-slate-400">Proving Time (s)</p>
           </div>
           <div className="bg-slate-700/50 rounded-lg p-4 text-center">
-            {result.verified !== undefined ? (
+            {/* Check for both undefined AND null - backend sends null for unset Option<bool> */}
+            {result.verified != null ? (
               <>
                 <p className={`text-2xl font-bold ${result.verified ? 'text-green-400' : 'text-red-400'}`}>
                   {result.verified ? 'Valid' : 'Invalid'}
@@ -55,8 +56,8 @@ export default function ResultPanel({ result, onVerify, isVerifying }: ResultPan
           </div>
         )}
 
-        {/* Verify Button */}
-        {result.verified === undefined && (
+        {/* Verify Button - show when verified is undefined OR null */}
+        {result.verified == null && (
           <button
             onClick={onVerify}
             disabled={isVerifying}
@@ -81,8 +82,8 @@ export default function ResultPanel({ result, onVerify, isVerifying }: ResultPan
           </button>
         )}
 
-        {/* Verification Result */}
-        {result.verified !== undefined && (
+        {/* Verification Result - show when verified is actually set (not null/undefined) */}
+        {result.verified != null && (
           <div className={`p-4 rounded-lg ${result.verified ? 'bg-green-500/10 border border-green-500/30' : 'bg-red-500/10 border border-red-500/30'}`}>
             <div className="flex items-center gap-3">
               {result.verified ? (
@@ -98,7 +99,7 @@ export default function ResultPanel({ result, onVerify, isVerifying }: ResultPan
                 <p className={`font-medium ${result.verified ? 'text-green-400' : 'text-red-400'}`}>
                   {result.verified ? 'Proof Verified Successfully' : 'Proof Verification Failed'}
                 </p>
-                {result.verification_time_ms !== undefined && (
+                {result.verification_time_ms != null && (
                   <p className="text-sm text-slate-400">
                     Verified in {result.verification_time_ms}ms
                   </p>
