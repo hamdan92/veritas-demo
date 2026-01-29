@@ -7,15 +7,15 @@ interface StepVisualizerProps {
 }
 
 const steps = [
-  { id: 'upload', label: 'Upload Image', description: 'Select a C2PA-signed image' },
-  { id: 'edit', label: 'Select Edit', description: 'Choose transformation' },
-  { id: 'prove', label: 'Generate Proof', description: 'Create ZK-SNARK' },
-  { id: 'verify', label: 'Verify', description: 'Validate the proof' },
+  { id: 'sign', label: 'Sign Image', description: 'Actor 1: C2PA Camera', actor: '📷' },
+  { id: 'edit', label: 'Select Edit', description: 'Choose transformation', actor: '✏️' },
+  { id: 'prove', label: 'Generate Proof', description: 'Actor 2: ZK Prover', actor: '🔐' },
+  { id: 'verify', label: 'Verify', description: 'Actor 3: Verifier', actor: '✓' },
 ];
 
 function getStepStatus(stepId: string, currentStep: Step): 'complete' | 'current' | 'upcoming' {
   const stepMap: Record<string, number> = {
-    upload: 0,
+    sign: 0,
     edit: 1,
     prove: 2,
     verify: 3,
@@ -24,7 +24,8 @@ function getStepStatus(stepId: string, currentStep: Step): 'complete' | 'current
   const currentMap: Record<Step, number> = {
     idle: -1,
     uploading: 0,
-    image_ready: 1,
+    signing: 0,
+    signed: 1,
     selecting_edit: 1,
     generating_proof: 2,
     proof_complete: 3,

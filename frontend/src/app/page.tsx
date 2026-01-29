@@ -18,6 +18,22 @@ export interface EditParams {
   new_height?: number;
 }
 
+export interface SignedImageData {
+  mode: string;
+  signed_data: string;
+  image_hash: string;
+  signature: string;
+  public_key: string;
+  signing_time_ms: number;
+  metadata: {
+    timestamp: number;
+    device_id: string;
+    width: number;
+    height: number;
+    color_depth: number;
+  };
+}
+
 export interface JobResult {
   edited_image?: string;
   proof?: string;
@@ -52,24 +68,29 @@ export interface Job {
   error?: string;
 }
 
+// Updated steps to reflect 3-actor flow
 export type Step = 
   | 'idle'
   | 'uploading'
-  | 'image_ready'
+  | 'signing'          // Actor 1: Camera signs the image
+  | 'signed'           // Image is now signed with C2PA
   | 'selecting_edit'
-  | 'generating_proof'
+  | 'generating_proof' // Actor 2: Prover generates ZK proof
   | 'proof_complete'
-  | 'verifying'
+  | 'verifying'        // Actor 3: Verifier checks proof
   | 'verified';
 
 export default function Home() {
   const [image, setImage] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_imageFile, setImageFile] = useState<File | null>(null);
   const [currentStep, setCurrentStep] = useState<Step>('idle');
   const [editParams, setEditParams] = useState<EditParams | null>(null);
   const [job, setJob] = useState<Job | null>(null);
   const [result, setResult] = useState<JobResult | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [signedImage, setSignedImage] = useState<SignedImageData | null>(null);
+  const [signingMode, setSigningMode] = useState<'lattice' | 'polynomial'>('lattice');
 
   // Use production URL directly since NEXT_PUBLIC_ vars need to be available at build time
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 
@@ -81,8 +102,8 @@ export default function Home() {
     setLogs(prev => [...prev, { timestamp: new Date(), level, message }]);
   }, []);
 
-  const handleImageUpload = (file: File, dataUrl: string) => {
-    addLog('step', 'Image upload initiated');
+  const handleImageUpload = async (file: File, dataUrl: string) => {
+    addLog('step', '═══ ACTOR 1: SIGNER (Camera/C2PA) ═══');
     addLog('info', `File: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
     addLog('info', `Type: ${file.type || 'unknown'}`);
     
@@ -101,22 +122,73 @@ export default function Home() {
     if (file.size > 10 * 1024) {
       addLog('warning', 'File may be too large for server memory limits');
       addLog('warning', 'Recommended: Use images under 10KB (32x32 to 64x64 pixels)');
-      addLog('info', 'Larger images will likely crash the server during proof generation');
     }
     
     setImage(dataUrl);
     setImageFile(file);
-    setCurrentStep('image_ready');
+    setCurrentStep('signing');
     setJob(null);
     setResult(null);
+    setSignedImage(null);
     
-    addLog('step', 'Simulating C2PA signature verification...');
-    addLog('info', 'Checking image provenance metadata');
+    // Sign the image (Actor 1: Camera/Signer)
+    addLog('step', 'Initiating C2PA signing process...');
+    addLog('info', `Signing mode: ${signingMode === 'lattice' ? 'Mode 1 (Lattice + Poseidon)' : 'Mode 2 (Polynomial Commitment)'}`);
     
-    setTimeout(() => {
-      addLog('success', 'Image loaded and ready for editing');
-      addLog('info', 'In production: C2PA manifest would be verified here');
-    }, 500);
+    try {
+      const base64Data = dataUrl.split(',')[1];
+      
+      const response = await fetch(`${API_URL}/api/sign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image: base64Data,
+          mode: signingMode,
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+      
+      const signResult = await response.json();
+      
+      addLog('success', 'Image signed successfully!');
+      addLog('info', `Mode: ${signResult.mode}`);
+      addLog('info', `Hash: ${signResult.image_hash.slice(0, 16)}...`);
+      addLog('info', `Signature: ${signResult.signature.slice(0, 16)}...`);
+      addLog('info', `Signing time: ${signResult.signing_time_ms}ms`);
+      addLog('info', `Device: ${signResult.metadata.device_id}`);
+      
+      setSignedImage(signResult);
+      setCurrentStep('signed');
+      
+      addLog('step', 'Image ready for editing (proceed to Actor 2: Prover)');
+    } catch (error) {
+      console.error('Signing error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      addLog('error', `Signing failed: ${errorMessage}`);
+      addLog('info', 'Falling back to demo mode (simulated signature)');
+      
+      // Fall back to simulated signing for demo
+      setSignedImage({
+        mode: 'Demo Mode (Simulated)',
+        signed_data: '',
+        image_hash: 'demo_hash_' + Date.now(),
+        signature: 'demo_sig_' + Date.now(),
+        public_key: 'demo_pk_' + Date.now(),
+        signing_time_ms: 0,
+        metadata: {
+          timestamp: Date.now(),
+          device_id: 'Demo-Camera',
+          width: 0,
+          height: 0,
+          color_depth: 8,
+        },
+      });
+      setCurrentStep('signed');
+    }
   };
 
   const handleEditSelect = async (params: EditParams) => {
@@ -125,7 +197,8 @@ export default function Home() {
     setEditParams(params);
     setCurrentStep('generating_proof');
     
-    addLog('step', `Edit operation selected: ${params.type.toUpperCase()}`);
+    addLog('step', '═══ ACTOR 2: PROVER (Newsroom Editor) ═══');
+    addLog('info', `Edit operation: ${params.type.toUpperCase()}`);
     
     if (params.type === 'crop') {
       addLog('info', `Crop region: (${params.x}, ${params.y}) size ${params.width}x${params.height}`);
@@ -135,8 +208,8 @@ export default function Home() {
       addLog('info', `New dimensions: ${params.new_width}x${params.new_height}`);
     }
     
-    addLog('step', 'Initiating ZK proof generation...');
-    addLog('info', `Backend: ${API_URL}`);
+    addLog('step', 'Generating ZK proof that edit was applied correctly...');
+    addLog('info', 'Proof shows: f(original) = edited WITHOUT revealing original');
     
     try {
       // Extract base64 data from data URL
@@ -281,8 +354,12 @@ export default function Home() {
     if (!result?.proof) return;
     
     setCurrentStep('verifying');
-    addLog('step', 'Initiating proof verification');
-    addLog('info', 'Verifier checks PLONK equations + FRI proximity');
+    addLog('step', '═══ ACTOR 3: VERIFIER (News Reader) ═══');
+    addLog('info', 'Verification checks:');
+    addLog('info', '  1. C2PA signature on original image hash');
+    addLog('info', '  2. Hash proof (Mode 1) or commitment (Mode 2)');
+    addLog('info', '  3. Edit proof via PLONK + FRI');
+    addLog('info', '  4. Consistency between proofs');
     
     try {
       const response = await fetch(`${API_URL}/api/verify`, {
@@ -327,7 +404,8 @@ export default function Home() {
     setEditParams(null);
     setJob(null);
     setResult(null);
-    setLogs([{ timestamp: new Date(), level: 'info', message: 'Ready for new image' }]);
+    setSignedImage(null);
+    setLogs([{ timestamp: new Date(), level: 'info', message: 'Ready for new image - 3-Actor Flow: Signer → Prover → Verifier' }]);
   };
 
   return (
@@ -354,11 +432,68 @@ export default function Home() {
         {/* Step Visualizer */}
         <StepVisualizer currentStep={currentStep} />
         
+        {/* 3-Actor Flow Indicator */}
+        <div className="flex justify-center gap-4 mt-4 mb-2">
+          <div className={`px-4 py-2 rounded-lg text-sm font-medium ${
+            currentStep === 'signing' || currentStep === 'signed' 
+              ? 'bg-blue-600 text-white' 
+              : currentStep === 'idle' 
+                ? 'bg-slate-700 text-slate-300'
+                : 'bg-slate-800 text-slate-500'
+          }`}>
+            1. Signer (Camera)
+          </div>
+          <div className={`px-4 py-2 rounded-lg text-sm font-medium ${
+            currentStep === 'selecting_edit' || currentStep === 'generating_proof' || currentStep === 'proof_complete'
+              ? 'bg-blue-600 text-white' 
+              : 'bg-slate-800 text-slate-500'
+          }`}>
+            2. Prover (Editor)
+          </div>
+          <div className={`px-4 py-2 rounded-lg text-sm font-medium ${
+            currentStep === 'verifying' || currentStep === 'verified'
+              ? 'bg-blue-600 text-white' 
+              : 'bg-slate-800 text-slate-500'
+          }`}>
+            3. Verifier (Reader)
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
           {/* Left Panel - Image & Controls */}
           <div className="lg:col-span-2 space-y-6">
             {currentStep === 'idle' ? (
-              <ImageUpload onUpload={handleImageUpload} />
+              <div className="space-y-4">
+                {/* Signing Mode Selection */}
+                <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+                  <h3 className="text-sm font-medium text-slate-400 mb-3">Signing Mode (as per VerITAS paper)</h3>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="signingMode"
+                        checked={signingMode === 'lattice'}
+                        onChange={() => setSigningMode('lattice')}
+                        className="text-blue-500"
+                      />
+                      <span className="text-slate-300">Mode 1: Lattice + Poseidon</span>
+                      <span className="text-xs text-slate-500">(for cameras)</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="signingMode"
+                        checked={signingMode === 'polynomial'}
+                        onChange={() => setSigningMode('polynomial')}
+                        className="text-blue-500"
+                      />
+                      <span className="text-slate-300">Mode 2: Polynomial Commitment</span>
+                      <span className="text-xs text-slate-500">(for powerful signers)</span>
+                    </label>
+                  </div>
+                </div>
+                <ImageUpload onUpload={handleImageUpload} />
+              </div>
             ) : (
               <div className="space-y-6">
                 {/* Original/Edited Images */}
@@ -389,8 +524,31 @@ export default function Home() {
                   </div>
                 </div>
 
+                {/* Signing Status */}
+                {currentStep === 'signing' && (
+                  <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+                    <h3 className="text-lg font-semibold text-white mb-4">Signing Image (Actor 1: Camera)</h3>
+                    <div className="flex items-center gap-3">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
+                      <p className="text-slate-400">Computing {signingMode === 'lattice' ? 'Lattice + Poseidon hash' : 'Polynomial commitment'}...</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Signed Image Info */}
+                {signedImage && currentStep === 'signed' && (
+                  <div className="bg-slate-800 rounded-xl p-4 border border-green-600/50">
+                    <h3 className="text-sm font-medium text-green-400 mb-2">✓ Image Signed (C2PA)</h3>
+                    <div className="text-xs text-slate-400 space-y-1">
+                      <p>Mode: {signedImage.mode}</p>
+                      <p>Hash: {signedImage.image_hash.slice(0, 24)}...</p>
+                      <p>Device: {signedImage.metadata.device_id}</p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Edit Controls */}
-                {(currentStep === 'image_ready' || currentStep === 'selecting_edit') && (
+                {(currentStep === 'signed' || currentStep === 'selecting_edit') && (
                   <EditControls onEditSelect={handleEditSelect} />
                 )}
 
