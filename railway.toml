@@ -1,0 +1,5 @@
+[build]
+# Railway will auto-detect projects
+
+[deploy]
+# Configuration will be per-service in Railway dashboard

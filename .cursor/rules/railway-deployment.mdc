@@ -1,0 +1,22 @@
+---
+description: All services deploy to Railway - no local development
+alwaysApply: true
+---
+
+# Railway-First Development
+
+This project runs entirely on Railway from day 0. Nothing runs locally.
+
+## Implications
+
+- **No local dev scripts** - No `docker-compose.yml` for local, no "start dev server" instructions
+- **Environment variables** - Configure via Railway dashboard, reference in code via `process.env` / `os.environ`
+- **Databases** - Provision through Railway, use Railway-provided connection strings
+- **Service communication** - Use Railway's private networking or public URLs
+- **Logs & debugging** - Use Railway's log viewer, not local console
+
+## When Building
+
+- Write code that expects Railway's environment
+- Use Railway CLI (`railway run`) if you need to test with production env vars
+- Push to deploy - Railway handles the rest
