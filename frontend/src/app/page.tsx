@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import ImageUpload from '@/components/ImageUpload';
 import EditControls from '@/components/EditControls';
 import StepVisualizer from '@/components/StepVisualizer';
 import TechnicalPanel from '@/components/TechnicalPanel';
 import ResultPanel from '@/components/ResultPanel';
+import LogPanel, { LogEntry } from '@/components/LogPanel';
 
 export interface EditParams {
   type: 'crop' | 'blur' | 'resize' | 'grayscale';
@@ -62,15 +63,48 @@ export default function Home() {
   const [editParams, setEditParams] = useState<EditParams | null>(null);
   const [job, setJob] = useState<Job | null>(null);
   const [result, setResult] = useState<JobResult | null>(null);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
+  const addLog = useCallback((level: LogEntry['level'], message: string) => {
+    setLogs(prev => [...prev, { timestamp: new Date(), level, message }]);
+  }, []);
+
   const handleImageUpload = (file: File, dataUrl: string) => {
+    addLog('step', 'Image upload initiated');
+    addLog('info', `File: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
+    addLog('info', `Type: ${file.type || 'unknown'}`);
+    
+    // Check file type
+    const supportedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif'];
+    if (!supportedTypes.includes(file.type)) {
+      addLog('error', `Unsupported format: ${file.type}`);
+      addLog('warning', 'Supported formats: PNG, JPEG, WebP, GIF');
+      addLog('warning', 'HEIC/HEIF is NOT supported');
+      return;
+    }
+    
+    addLog('success', 'Image format validated');
+    
+    // Check file size
+    if (file.size > 500 * 1024) {
+      addLog('warning', 'Large file detected - proof generation may take several minutes');
+    }
+    
     setImage(dataUrl);
     setImageFile(file);
     setCurrentStep('image_ready');
     setJob(null);
     setResult(null);
+    
+    addLog('step', 'Simulating C2PA signature verification...');
+    addLog('info', 'Checking image provenance metadata');
+    
+    setTimeout(() => {
+      addLog('success', 'Image loaded and ready for editing');
+      addLog('info', 'In production: C2PA manifest would be verified here');
+    }, 500);
   };
 
   const handleEditSelect = async (params: EditParams) => {
@@ -79,9 +113,24 @@ export default function Home() {
     setEditParams(params);
     setCurrentStep('generating_proof');
     
+    addLog('step', `Edit operation selected: ${params.type.toUpperCase()}`);
+    
+    if (params.type === 'crop') {
+      addLog('info', `Crop region: (${params.x}, ${params.y}) size ${params.width}x${params.height}`);
+    } else if (params.type === 'blur') {
+      addLog('info', `Blur region: (${params.x}, ${params.y}) size ${params.width}x${params.height}`);
+    } else if (params.type === 'resize') {
+      addLog('info', `New dimensions: ${params.new_width}x${params.new_height}`);
+    }
+    
+    addLog('step', 'Initiating ZK proof generation...');
+    addLog('info', 'Connecting to backend API');
+    
     try {
       // Extract base64 data from data URL
       const base64Data = image.split(',')[1];
+      
+      addLog('info', `Sending image data (${(base64Data.length / 1024).toFixed(1)} KB base64)`);
       
       // Create the edit request body
       const editBody: Record<string, unknown> = { type: params.type };
@@ -105,38 +154,87 @@ export default function Home() {
       });
       
       if (!response.ok) {
-        throw new Error('Failed to create edit job');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
       }
       
       const { job_id } = await response.json();
       
+      addLog('success', `Job created: ${job_id.slice(0, 8)}...`);
+      addLog('step', 'Starting Plonky2 proof generation');
+      addLog('info', 'This may take 30-120 seconds for small images');
+      addLog('info', 'Building arithmetic circuit...');
+      
       // Poll for job status
       pollJobStatus(job_id);
     } catch (error) {
-      console.error('Error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      addLog('error', `Failed to create job: ${errorMessage}`);
       setCurrentStep('image_ready');
     }
   };
 
   const pollJobStatus = async (jobId: string) => {
+    let lastProgress = 0;
+    let pollCount = 0;
+    
     const poll = async () => {
       try {
         const response = await fetch(`${API_URL}/api/job/${jobId}`);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        
         const jobData: Job = await response.json();
         setJob(jobData);
         
+        // Log progress updates
+        if (jobData.progress > lastProgress) {
+          if (jobData.progress >= 10 && lastProgress < 10) {
+            addLog('info', 'Processing image pixels...');
+          }
+          if (jobData.progress >= 30 && lastProgress < 30) {
+            addLog('info', 'Computing Poseidon hashes...');
+          }
+          if (jobData.progress >= 50 && lastProgress < 50) {
+            addLog('info', 'Building PLONK gates...');
+          }
+          if (jobData.progress >= 70 && lastProgress < 70) {
+            addLog('info', 'Generating FRI commitments...');
+          }
+          if (jobData.progress >= 90 && lastProgress < 90) {
+            addLog('info', 'Finalizing proof...');
+          }
+          lastProgress = jobData.progress;
+        }
+        
         if (jobData.status === 'completed') {
+          addLog('success', 'ZK proof generated successfully!');
+          if (jobData.result?.proving_time_ms) {
+            addLog('info', `Proving time: ${(jobData.result.proving_time_ms / 1000).toFixed(2)}s`);
+          }
+          if (jobData.result?.proof_size) {
+            addLog('info', `Proof size: ${(jobData.result.proof_size / 1024).toFixed(2)} KB`);
+          }
+          addLog('step', 'Proof ready for verification');
           setResult(jobData.result || null);
           setCurrentStep('proof_complete');
         } else if (jobData.status === 'failed') {
+          addLog('error', `Job failed: ${jobData.error || 'Unknown error'}`);
           setCurrentStep('image_ready');
         } else {
           // Keep polling
-          setTimeout(poll, 1000);
+          pollCount++;
+          if (pollCount % 10 === 0) {
+            addLog('info', `Still processing... (${pollCount * 2}s elapsed)`);
+          }
+          setTimeout(poll, 2000);
         }
       } catch (error) {
-        console.error('Polling error:', error);
-        setTimeout(poll, 2000);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        addLog('warning', `Poll error: ${errorMessage}, retrying...`);
+        setTimeout(poll, 3000);
       }
     };
     
@@ -147,6 +245,8 @@ export default function Home() {
     if (!result?.proof) return;
     
     setCurrentStep('verifying');
+    addLog('step', 'Initiating proof verification');
+    addLog('info', 'Verifier checks PLONK equations + FRI proximity');
     
     try {
       const response = await fetch(`${API_URL}/api/verify`, {
@@ -160,21 +260,38 @@ export default function Home() {
       });
       
       const verification = await response.json();
-      setResult(prev => prev ? { ...prev, verified: verification.valid, verification_time_ms: verification.verification_time_ms } : null);
+      
+      if (verification.valid) {
+        addLog('success', 'PROOF VERIFIED SUCCESSFULLY');
+        addLog('info', `Verification time: ${verification.verification_time_ms || '<1'}ms`);
+        addLog('step', 'Image transformation is cryptographically proven');
+      } else {
+        addLog('error', 'Proof verification FAILED');
+        addLog('warning', verification.error || 'Invalid proof');
+      }
+      
+      setResult(prev => prev ? { 
+        ...prev, 
+        verified: verification.valid, 
+        verification_time_ms: verification.verification_time_ms 
+      } : null);
       setCurrentStep('verified');
     } catch (error) {
-      console.error('Verification error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      addLog('error', `Verification error: ${errorMessage}`);
       setCurrentStep('proof_complete');
     }
   };
 
   const handleReset = () => {
+    addLog('info', 'Session reset');
     setImage(null);
     setImageFile(null);
     setCurrentStep('idle');
     setEditParams(null);
     setJob(null);
     setResult(null);
+    setLogs([{ timestamp: new Date(), level: 'info', message: 'Ready for new image' }]);
   };
 
   return (
@@ -273,6 +390,9 @@ export default function Home() {
                 </button>
               </div>
             )}
+
+            {/* Log Panel */}
+            <LogPanel logs={logs} />
           </div>
 
           {/* Right Panel - Technical Details */}
